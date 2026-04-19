@@ -36,6 +36,7 @@ class DecisionKernelV53 {
         const adapted = { ...baseWeights };
         history.forEach((entry, index) => {
             const opt = entry.failedOption;
+            if (!opt || typeof opt !== 'object') return;
             const age: number = history.length - 1 - index;
             const decay = Math.exp(-age * ADPE_CONFIG.historyDecay);
             const lr = ADPE_CONFIG.learningRate * decay;
@@ -113,12 +114,33 @@ type LogData = {
     implementation_plan?: { step: string; action: string; tools?: string }[];
 };
 
+type StrategyMetrics = {
+    impact: number;
+    feasibility: number;
+    risk: number;
+    cost: number;
+    time: number;
+};
+
 type LogEntry = {
     stageId: string;
     data: LogData;
     isLocal?: boolean;
     iteration?: number;
 };
+
+const hasValidMetricValue = (value: unknown): value is number => (
+    typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1
+);
+
+const hasValidMetrics = (metrics: any): metrics is StrategyMetrics => (
+    !!metrics &&
+    hasValidMetricValue(metrics.impact) &&
+    hasValidMetricValue(metrics.feasibility) &&
+    hasValidMetricValue(metrics.risk) &&
+    hasValidMetricValue(metrics.cost) &&
+    hasValidMetricValue(metrics.time)
+);
 
 export default function App() {
     const [input, setInput] = useState(() => localStorage.getItem('SAV_INPUT') || 'МЕТА: Заробити 500 грн за 2 години.\nОБМЕЖЕННЯ: Тільки телефон, без вкладень.\nМОВА: Українська.');
@@ -301,15 +323,17 @@ export default function App() {
             if (stage.id === 'GATE') {
                 const baseWeights = { impact: 0.45, feasibility: 0.25, risk: -0.20, cost: -0.05, time: -0.05 };
                 const adaptedWeights = DecisionKernelV53.adaptWeights(baseWeights, localMemory.adpeHistory);
+                const metricsA = localMemory.STRATEGY?.metrics_A;
+                const metricsB = localMemory.STRATEGY?.metrics_B;
 
-                if (!localMemory.STRATEGY?.metrics_A || !localMemory.STRATEGY?.metrics_B) {
+                if (!hasValidMetrics(metricsA) || !hasValidMetrics(metricsB)) {
                     result = {
-                        summary: 'ADPE не може виконати вибір: відсутні метрики стратегій A/B. Повертаюсь до етапу STRATEGY для повторної генерації.',
+                        summary: 'ADPE не може виконати вибір: метрики A/B відсутні або невалідні (очікується діапазон 0..1). Повертаюсь до STRATEGY для повторної генерації.',
                         confidence: 0,
                         decision: 'RETHINK'
                     };
                     localMemory.lastPayload = 'Перегенеруй стратегії A/B з валідними метриками impact/feasibility/risk/cost/time у діапазоні 0..1.';
-                    localMemory.graveyard.push('ADPE guard: відсутні метрики A/B, примусовий цикл RETHINK.');
+                    localMemory.graveyard.push('ADPE guard: невалідні метрики A/B, примусовий цикл RETHINK.');
                     setGraveyardCount(localMemory.graveyard.length);
                     localMemory.adpeHistory.push({
                         attempt: currentLoops + 1,
@@ -317,19 +341,36 @@ export default function App() {
                         reason: result.summary,
                         failedOption: { impact: 0, feasibility: 0, risk: 1, cost: 1, time: 1 }
                     });
-                    setMemory({ ...localMemory });
-                    setLogs(prev => [...prev, { stageId: stage.id, data: result, iteration: currentIteration }]);
-                    setNodeStatuses(prev => ({ ...prev, [stage.id]: 'rethink', STRATEGY: 'rethink', SIMULATION: '', CRITIC: '' }));
-                    currentLoops++;
-                    setLoops(currentLoops);
-                    localCursor = 4; // STRATEGY
-                    await new Promise(r => setTimeout(r, 800));
-                    continue;
+                    if (currentLoops < maxLoops) {
+                        setMemory({ ...localMemory });
+                        setLogs(prev => [...prev, { stageId: stage.id, data: result, iteration: currentIteration }]);
+                        setNodeStatuses(prev => ({ ...prev, [stage.id]: 'rethink', STRATEGY: 'rethink', SIMULATION: '', CRITIC: '' }));
+                        currentLoops++;
+                        setLoops(currentLoops);
+                        localCursor = 4; // STRATEGY
+                        await new Promise(r => setTimeout(r, 800));
+                        continue;
+                    }
+
+                    setLogs(prev => [...prev, {
+                        stageId: stage.id,
+                        data: {
+                            summary: 'ADPE зупинено: після максимального числа спроб метрики залишились невалідними. Потрібне ручне уточнення запиту.',
+                            confidence: 0,
+                            decision: 'REPAIR'
+                        },
+                        iteration: currentIteration
+                    }]);
+                    setStatusText('ПОТРІБНЕ КОРИГУВАННЯ');
+                    setVerdict('Цикл зупинено через невалідні метрики стратегії. Уточніть вхідний запит і запустіть ітерацію знову.');
+                    setNodeStatuses(prev => ({ ...prev, [stage.id]: 'rethink', STRATEGY: 'rethink' }));
+                    setIsRunning(false);
+                    return;
                 }
 
                 const hypotheses = [
-                    { ...localMemory.STRATEGY.metrics_A, label: 'Ветка А' },
-                    { ...localMemory.STRATEGY.metrics_B, label: 'Ветка Б' }
+                    { ...metricsA, label: 'Ветка А' },
+                    { ...metricsB, label: 'Ветка Б' }
                 ];
 
                 const evaluated = hypotheses
