@@ -1,0 +1,271 @@
+:root {
+    --bg: #030303;
+    --accent: #00ff88;
+    --accent-dim: #00331a;
+    --text: #a0a0a0;
+    --panel: #0a0a0a;
+    --border: #1a1a1a;
+    --error: #ff4444;
+    --warn: #ffaa00;
+    --info: #00ccff;
+    --safe-area: 15px;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+
+body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', 'Menlo', monospace;
+    margin: 0;
+    min-height: 100vh;
+    padding-bottom: 120px;
+    overflow-x: hidden;
+}
+
+header {
+    padding: 15px var(--safe-area);
+    background: rgba(0,0,0,0.9);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.engine-title { color: var(--accent); font-weight: 800; font-size: 0.7rem; margin: 0; letter-spacing: 1px; }
+#status-chip { font-size: 0.55rem; padding: 3px 8px; border: 1px solid var(--accent); color: var(--accent); text-transform: uppercase; }
+
+#pipeline-ui {
+    display: flex;
+    padding: 15px;
+    gap: 10px;
+    overflow-x: auto;
+    background: #000;
+    border-bottom: 1px solid var(--border);
+    scrollbar-width: none;
+}
+
+.node {
+    min-width: 95px;
+    padding: 10px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    font-size: 0.55rem;
+    text-align: center;
+    position: relative;
+    transition: all 0.3s;
+    overflow: hidden;
+}
+.node.active { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 10px var(--accent-dim); }
+.node.passed { border-color: var(--info); color: var(--info); }
+.node.rethink { border-color: var(--error); color: var(--error); animation: blink 0.5s infinite; }
+
+.node-progress-container {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.node-progress-bar {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+.node.active .node-progress-bar {
+    animation: nodeProgressAnim 3s linear forwards;
+}
+
+#node-DEEP_RESEARCH.active .node-progress-bar {
+    animation-duration: 5s;
+}
+
+.node.passed .node-progress-bar {
+    width: 100%;
+    background: var(--info);
+}
+
+.node.rethink .node-progress-bar {
+    width: 100%;
+    background: var(--error);
+}
+
+@keyframes nodeProgressAnim {
+    0% { width: 0%; }
+    100% { width: 92%; }
+}
+
+@keyframes blink { 50% { opacity: 0.4; } }
+
+main { padding: var(--safe-area); max-width: 850px; margin: 0 auto; }
+
+textarea {
+    width: 100%;
+    background: #050505;
+    border: 1px solid var(--border);
+    padding: 14px;
+    color: #fff;
+    font-size: 0.9rem;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    line-height: 1.4;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.highlight-flash {
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 15px var(--accent-dim) !important;
+    animation: flash-border 1s ease-in-out;
+}
+
+@keyframes flash-border {
+    0% { border-color: var(--border); }
+    50% { border-color: var(--accent); }
+    100% { border-color: var(--border); }
+}
+
+.log-entry {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 15px;
+    margin-bottom: 15px;
+    border-left: 3px solid var(--accent-dim);
+    animation: slideIn 0.3s ease-out;
+}
+
+.log-local {
+    background: rgba(255, 255, 255, 0.02);
+    border-left: 3px solid #555;
+    padding: 10px 15px;
+    margin-bottom: 15px;
+    font-size: 0.75rem;
+    color: #888;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn { from { opacity: 0; transform: translateX(-5px); } to { opacity: 1; transform: translateX(0); } }
+
+.log-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.65rem;
+    margin-bottom: 10px;
+    color: var(--accent);
+    text-transform: uppercase;
+}
+
+.iteration-divider {
+    margin: 10px 0 14px;
+    padding: 7px 10px;
+    border: 1px dashed var(--accent-dim);
+    color: var(--accent);
+    background: rgba(0, 255, 136, 0.04);
+    font-size: 0.62rem;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+}
+
+.meta-block {
+    margin-top: 8px;
+    padding: 8px 10px;
+    border-left: 2px solid var(--border);
+    background: rgba(255, 255, 255, 0.02);
+    font-size: 0.72rem;
+    color: #cfcfcf;
+    line-height: 1.45;
+    white-space: pre-wrap;
+}
+
+.meta-block strong {
+    color: #f1f1f1;
+}
+
+.research-block {
+    border-left-color: var(--info);
+    background: rgba(0, 204, 255, 0.08);
+}
+
+.branch-a {
+    border-left-color: var(--accent);
+}
+
+.branch-b {
+    border-left-color: var(--warn);
+}
+
+.cross-analysis {
+    border-left-color: #b38cff;
+    background: rgba(179, 140, 255, 0.1);
+}
+
+.dynamic-bridge {
+    border-left-color: #6a7dff;
+    background: rgba(106, 125, 255, 0.1);
+}
+
+.decision-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    font-size: 0.55rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    border-radius: 2px;
+    margin-top: 10px;
+}
+.badge-accept { background: var(--accent-dim); color: var(--accent); }
+.badge-repair { background: #3d2b00; color: var(--warn); }
+.badge-rethink { background: #3d0000; color: var(--error); }
+
+.controls {
+    position: fixed;
+    bottom: 0; left: 0; width: 100%;
+    padding: 15px;
+    background: rgba(0,0,0,0.95);
+    backdrop-filter: blur(10px);
+    display: grid;
+    grid-template-columns: 1fr 1.5fr;
+    gap: 12px;
+    border-top: 1px solid var(--border);
+}
+
+button {
+    padding: 16px;
+    background: none;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-weight: 900;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+button.primary { background: var(--accent); color: #000; }
+button:active { opacity: 0.7; }
+button:disabled { opacity: 0.2; cursor: not-allowed; }
+
+#verdict-view {
+    margin-top: 30px;
+    border: 2px solid var(--accent);
+    padding: 25px;
+    background: #000;
+    animation: glow 2s infinite alternate;
+}
+
+@keyframes glow { from { box-shadow: 0 0 5px var(--accent-dim); } to { box-shadow: 0 0 20px var(--accent-dim); } }
+
+.loading-dots:after {
+    content: '.';
+    animation: dots 1.5s steps(5, end) infinite;
+}
+@keyframes dots {
+    0%, 20% { content: '.'; }
+    40% { content: '..'; }
+    60% { content: '...'; }
+    80%, 100% { content: ''; }
+}
